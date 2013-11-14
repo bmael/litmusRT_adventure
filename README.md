@@ -27,5 +27,9 @@ How to launch these samples
     - Go to src/samples/ and use make command to build the samples.
     - To execute a sample jsute type the name of the sample to launch without 
       extension
-	
+
+Git branching model
+-------------------
+We use the following git branching model for this project : 
+ - http://nvie.com/posts/a-successful-git-branching-model/
 
