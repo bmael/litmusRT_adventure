@@ -19,17 +19,22 @@
 /* Include threading support. */
 #include <pthread.h>
 
+/* Include semaphores support */
+#include <semaphore.h>
+
 /* Include the LITMUS^RT API.*/
 #include "litmus.h"
 
-#define PERIOD            100
+#define PERIOD1           50
+#define PERIOD2           800
 #define RELATIVE_DEADLINE 100
 #define EXEC_COST         10
 
 /* Let's create 10 threads in the example, 
  * for a total utilization of 1.
  */
-#define NUM_THREADS      10 
+#define NUM_THREADS      2 
+#define MAX_VALUE		 3000000
 
 /* The information passed to each thread. Could be anything. */
 struct thread_context {
@@ -41,12 +46,20 @@ struct thread_context {
  */
 void* rt_thread(void *tcontext);
 
-/* Declare the periodically invoked job. 
+/* Declare the periodically invoked job: increment a by step of 2. 
  * Returns 1 -> task should exit.
  *         0 -> task should continue.
  */
-int job(void);
+int jobPlus2(void);
 
+/* Declare the periodically invoked job: multiply a by 2. 
+ * Returns 1 -> task should exit.
+ *         0 -> task should continue.
+ */
+int jobMultiplyBy2(void);
+
+int shared_a; // the shared variable to increment.
+sem_t mutex;  // mutex to securize shared_a access.
 
 /* Catch errors.
  */
@@ -68,7 +81,6 @@ int main(int argc, char** argv)
 	int i;
 	struct thread_context ctx[NUM_THREADS];
 	pthread_t             task[NUM_THREADS];
-
 	/* The task is in background mode upon startup. */		
 
 
@@ -82,7 +94,9 @@ int main(int argc, char** argv)
 	 * 2) Work environment (e.g., global data structures, file data, etc.) would
 	 *    be setup here.
 	 */
-
+	
+	shared_a = 1;
+	sem_init(&mutex, 0,1);
 
 
 	/*****
@@ -129,7 +143,15 @@ void* rt_thread(void *tcontext)
 	/* Set up task parameters */
 	init_rt_task_param(&param);
 	param.exec_cost = ms2ns(EXEC_COST);
-	param.period = ms2ns(PERIOD);
+	
+	/* Invoke the right job. */
+	if(ctx->id == 0){
+	  param.period = ms2ns(PERIOD1); 
+	}
+	else{
+	  param.period = ms2ns(PERIOD2);
+	}
+	
 	param.relative_deadline = ms2ns(RELATIVE_DEADLINE);
 
 	/* What to do in the case of budget overruns? */
@@ -175,8 +197,13 @@ void* rt_thread(void *tcontext)
 	do {
 		/* Wait until the next job is released. */
 		sleep_next_period();
-		/* Invoke job. */
-		do_exit = job();		
+		/* Invoke the right job. */
+		if(ctx->id == 0){
+		 do_exit = jobPlus2(); 
+		}
+		else{
+		  do_exit = jobMultiplyBy2();
+		}		
 	} while (!do_exit);
 
 
@@ -192,10 +219,42 @@ void* rt_thread(void *tcontext)
 
 
 
-int job(void) 
+int jobPlus2(void) 
 {
+	int stop = 0;
+	
 	/* Do real-time calculation. */
-
+	sem_wait(&mutex);
+	shared_a = shared_a + 2;
+	
+	printf("FROM Thread 1: %d\n", shared_a);
+	
+	if(shared_a >= MAX_VALUE){
+	  stop = 1;
+	}
+	
+	sem_post(&mutex);
+	
 	/* Don't exit. */
-	return 0;
+	return stop;
+}
+
+int jobMultiplyBy2(void) 
+{
+	int stop = 0;
+  
+	/* Do real-time calculation. */
+	sem_wait(&mutex);
+	shared_a = shared_a * 2;
+	
+	printf("FROM Thread 2: %d\n", shared_a);
+	
+	if(shared_a >= MAX_VALUE){
+	  stop = 1;
+	}
+	
+	sem_post(&mutex);
+	
+	/* Don't exit. */
+	return stop;
 }
