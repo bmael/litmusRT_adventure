@@ -7,16 +7,19 @@ We have to modify JetBench to works under a litmus^RT kernel.
 Samples that we developed
 -------------------------
 First Step: 
+
 	- We create a useless real time task to understand how it works. 
 	  Take a look at src/samples/Aprinter.c based on base_task.c template source
 	  code from liblitmus.
 	
 Second Step:
+
 	- We create a useless real time multithreaded task to understand how it works.
 	  Take a look at src/samples/Aprinter_mt.c based on base_task_mt.c template 
 	  source code from liblitmus.
 	  
 Third Step:
+
 	- We use Aprinter_mt.c to replace basic threads by STM TL2 threads.
 	  Take a look at src/samples/Aprinter_mt_tl2.c.
 	  
