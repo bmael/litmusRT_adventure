@@ -27,8 +27,8 @@ How to launch these samples
 --------------------------- 
 	- Install litmus^RT. You can find some help here: 
 	  https://wiki.litmus-rt.org/litmus/InstallationInstructions
-    - Go to src/samples/ and use make command to build the samples.
-    - To execute a sample jsute type the name of the sample to launch without 
-      extension
+	- Go to src/samples/ and use make command to build the samples.
+	- To execute a sample just type the name of the sample to launch without 
+	  extension
 	
 
