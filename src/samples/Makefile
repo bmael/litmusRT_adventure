@@ -13,7 +13,7 @@ AR             = /usr/bin/ar
 % : %.c 
 	$(CC) $(CFLAGS) -o $@ $< $(CPPFLAGS) $(LDLIBS) $(LDFLAGS) include/obj/*.o
 	
-all: $(basename $(wildcard *.c))
+all: toolslib $(basename $(wildcard *.c))
 	
 memorylib : include/memory.h
 	$(CC) -c include/memory.c 
@@ -22,7 +22,7 @@ threadlib : include/thread.h
 	$(CC) -c include/thread.c 
 	
 toolslib: memorylib threadlib
-	mkdir include/obj
+	mkdir -p include/obj
 	mv thread.o include/obj/
 	mv memory.o include/obj/
 	
