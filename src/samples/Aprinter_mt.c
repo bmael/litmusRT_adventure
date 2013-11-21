@@ -25,9 +25,9 @@
 /* Include the LITMUS^RT API.*/
 #include "litmus.h"
 
-#define PERIOD1           50
+#define PERIOD1           100
 #define PERIOD2           800
-#define RELATIVE_DEADLINE 100
+#define RELATIVE_DEADLINE 50
 #define EXEC_COST         10
 
 /* Let's create 10 threads in the example, 
