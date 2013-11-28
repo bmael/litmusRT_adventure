@@ -133,6 +133,20 @@ typedef struct thread_barrier {
     long numThread;
 } thread_barrier_t;
 
+/* The information passed to each thread. Could be anything. */
+typedef struct thread_context {
+	int id;
+} thread_context;
+
+/* =============================================================================
+ * custom thread_startup
+ * -- Create pool of secondary threads
+ * -- numThread is total number of threads (primary + secondary)
+ * =============================================================================
+ */
+void
+rt_thread_startup (long numThread, pthread_t** task, void* rt_thread, thread_context* ctx);
+
 
 /* =============================================================================
  * thread_startup

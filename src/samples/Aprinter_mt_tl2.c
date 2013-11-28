@@ -110,23 +110,25 @@ int main(int argc, char** argv)
 	/***** 
 	 * 4) Launch threads.
 	 */
+	printf("[main] TM_STARTUP(%d)\n", NUM_THREADS);
 	TM_STARTUP(NUM_THREADS);
+	
+	printf("[main] P_MEMORY_STARTUP(%d)\n", NUM_THREADS);
 	P_MEMORY_STARTUP(NUM_THREADS);
 	
-	
-	for (i = 0; i < NUM_THREADS; i++) {
-		ctx[i].id = i;
-		pthread_create(task + i, NULL, rt_thread, (void *) (ctx + i));
-	}
-
-	
+	printf("[main] rt_thread_startup\n");
+	rt_thread_startup(NUM_THREADS, &task, rt_thread, ctx);
+		
 	/*****
 	 * 5) Wait for RT threads to terminate.
 	 */
-	for (i = 0; i < NUM_THREADS; i++)
-		pthread_join(task[i], NULL);
-
+	printf("[main] Wait for RT threads to terminate\n");
+	thread_shutdown();
+	
+	printf("[main] TM_SHUTDOWN()\n");
 	TM_SHUTDOWN();
+	
+	printf("[main] P_MEMORY_SHUTDOWN()\n");
 	P_MEMORY_SHUTDOWN();
 	
 	/***** 
@@ -146,7 +148,6 @@ void* rt_thread(void *tcontext)
 	int do_exit;
 	struct thread_context *ctx = (struct thread_context *) tcontext;
 	struct rt_task param;
-	TM_THREAD_ENTER();
 
 	/* Set up task parameters */
 	init_rt_task_param(&param);
@@ -200,25 +201,24 @@ void* rt_thread(void *tcontext)
 	/*****
 	 * 3) Invoke real-time jobs.
 	 */
-	do {
-		/* Wait until the next job is released. */
-		sleep_next_period();
-		/* Invoke the right job. */
-		if(ctx->id == 0){
-		 do_exit = jobPlus2(); 
-		}
-		else{
-		  do_exit = jobMultiplyBy2();
-		}		
-	} while (!do_exit);
-	TM_THREAD_EXIT();
+		printf("[main] start_routine for ctx->id: %d\n", ctx->id);
+		do{
+		  	sleep_next_period();
+		  /* Invoke the right job. */
+		  if(ctx->id == 1){
+			printf("[main] Starting the jobPlus2\n");
+			do_exit = jobPlus2(); 
+		  }
+		  else{
+			printf("[main] Starting the jobMultiplyBy2\n");
+			do_exit = jobMultiplyBy2();
+		  }	
+		}while(!do_exit);
 
-	
 	/*****
 	 * 4) Transition to background mode.
 	 */
 	CALL( task_mode(BACKGROUND_TASK) );
-
 
 	return NULL;
 }
@@ -228,12 +228,14 @@ void* rt_thread(void *tcontext)
 int jobPlus2(void) 
 {
 	int stop = 0;
+  
+	TM_THREAD_ENTER();
 	
 	/* Do real-time calculation. */
 	TM_BEGIN();
 	TM_SHARED_WRITE(shared_a, shared_a + 2);
 	
-	printf("FROM Thread 1: %d\n", shared_a);
+	printf("[Thread 1] a = %d\n", shared_a);
 	
 	if(shared_a >= MAX_VALUE){
 	  stop = 1;
@@ -241,19 +243,20 @@ int jobPlus2(void)
 	
 	TM_END();
 	
-	/* Don't exit. */
+	TM_THREAD_EXIT();
 	return stop;
 }
 
 int jobMultiplyBy2(void) 
-{
+{  
 	int stop = 0;
-  
+  	TM_THREAD_ENTER();
+	
 	/* Do real-time calculation. */
 	TM_BEGIN();
 	TM_SHARED_WRITE(shared_a, shared_a * 2);
 	
-	printf("FROM Thread 2: %d\n", shared_a);
+	printf("[Thread 2] a = %d\n", shared_a);
 	
 	if(shared_a >= MAX_VALUE){
 	  stop = 1;
@@ -261,7 +264,8 @@ int jobMultiplyBy2(void)
 	
 	TM_END();
 	
-	/* Don't exit. */
+	TM_THREAD_EXIT();
+
 	return stop;
 }
 

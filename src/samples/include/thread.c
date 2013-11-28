@@ -71,6 +71,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "thread.h"
 #include "types.h"
 
@@ -83,7 +84,6 @@ static THREAD_T*         global_threads         = NULL;
 static void            (*global_funcPtr)(void*) = NULL;
 static void*             global_argPtr          = NULL;
 static volatile bool_t   global_doShutdown      = FALSE;
-
 
 /* =============================================================================
  * threadWait
@@ -98,6 +98,7 @@ threadWait (void* argPtr)
     THREAD_LOCAL_SET(global_threadId, (long)threadId);
 
     while (1) {
+		printf("waiting...\n");
         THREAD_BARRIER(global_barrierPtr, threadId); /* wait for start parallel */
         if (global_doShutdown) {
             break;
@@ -109,6 +110,59 @@ threadWait (void* argPtr)
         }
     }
 }
+
+/* =============================================================================
+ * CUSTOM thread_startup
+ * -- Create pool of secondary threads
+ * -- numThread is total number of threads (primary + secondaries)
+ * =============================================================================
+ */
+void
+rt_thread_startup (long numThread,pthread_t** task, void* rt_thread, thread_context* ctx)
+{
+  	printf("[thread.c] setting thread with rt_thread function\n");
+    long i;
+
+    global_numThread = numThread;
+    global_doShutdown = FALSE;
+
+    /* Set up barrier */
+    assert(global_barrierPtr == NULL);
+    global_barrierPtr = THREAD_BARRIER_ALLOC(numThread);
+    assert(global_barrierPtr);
+    THREAD_BARRIER_INIT(global_barrierPtr, numThread);
+
+    /* Set up ids */
+    THREAD_LOCAL_INIT(global_threadId);
+    assert(global_threadIds == NULL);
+    global_threadIds = (long*)malloc(numThread * sizeof(long));
+    assert(global_threadIds);
+    for (i = 0; i < numThread; i++) {
+        global_threadIds[i] = i;
+    }
+
+    /* Set up thread list */
+    assert(global_threads == NULL);
+    global_threads = (THREAD_T*)malloc(numThread * sizeof(THREAD_T));
+    assert(global_threads);
+
+    /* Set up pool */
+    THREAD_ATTR_INIT(global_threadAttr);
+    for (i = 1; i <= numThread; i++) {
+	  	printf("[thread.c] creating thread with id: %ld\n", i);
+		ctx[i].id = i;
+        THREAD_CREATE(global_threads[i],
+                      global_threadAttr,
+                      rt_thread,
+                      (ctx+i));
+		/*
+     * Wait for primary thread to call thread_start
+     */
+    }
+    
+    *task = *global_threads;
+}
+
 
 
 /* =============================================================================
@@ -170,6 +224,7 @@ thread_startup (long numThread)
 void
 thread_start (void (*funcPtr)(void*), void* argPtr)
 {
+	printf("[thread.c] starting thread with id: %ld\n", thread_getId());
     global_funcPtr = funcPtr;
     global_argPtr = argPtr;
 
@@ -186,14 +241,18 @@ thread_start (void (*funcPtr)(void*), void* argPtr)
 void
 thread_shutdown ()
 {
+	printf("[thread.c] thread_shutdown\n");
     /* Make secondary threads exit wait() */
     global_doShutdown = TRUE;
     THREAD_BARRIER(global_barrierPtr, 0);
+	
+	printf("[thread.c] after THrfgerhkgjlkreygz\n");
 
     long numThread = global_numThread;
 
     long i;
-    for (i = 1; i < numThread; i++) {
+    for (i = 1; i <= numThread; i++) {
+		printf("[thread.c] join thread with id: %ld\n", i);
         THREAD_JOIN(global_threads[i]);
     }
 
@@ -280,6 +339,7 @@ thread_barrier (thread_barrier_t* barrierPtr, long threadId)
     do {
         index = base + threadId / i;
         if ((threadId % i) == 0) {
+			printf("[thread.c] thread_barrier : threadId % i == 0\n");
             THREAD_MUTEX_LOCK(barrierPtr[index].countLock);
             barrierPtr[index].count++;
             while (barrierPtr[index].count < 2) {

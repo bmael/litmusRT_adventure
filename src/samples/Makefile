@@ -2,10 +2,10 @@ LIBLITMUS      = /usr/src/linux.3.10.5-litmusRT/liblitmus/
 LIBTL2	       = ../../lib/
 INCLUDE	       = include/
 ARCH           = x86_64              
-CFLAGS         = -O2  -Werror -g -Wdeclaration-after-statement
+CFLAGS         = -O2  -Werror -g -Wdeclaration-after-statement -DSTM
 LDFLAGS        = -m64                
 LDLIBS         = -L${LIBLITMUS} -L${LIBTL2} -llitmus -lpthread -ltl2 ../../lib/libtl2.a
-CPPFLAGS       = -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -m64 -DARCH=x86_64 -DSTM -I${LIBLITMUS}include -I${LIBLITMUS}arch/x86/include -I${LIBLITMUS}arch/x86/include/uapi -I${LIBLITMUS}arch/x86/include/generated/uapi -I${INCLUDE} -I${INCLUDE}tl2
+CPPFLAGS       = -D_XOPEN_SOURCE=600 -D_GNU_SOURCE -m64 -DARCH=x86_64 -I${LIBLITMUS}include -I${LIBLITMUS}arch/x86/include -I${LIBLITMUS}arch/x86/include/uapi -I${LIBLITMUS}arch/x86/include/generated/uapi -I${INCLUDE} -I${INCLUDE}tl2
 CC             = /usr/bin/gcc        
 LD             = /usr/bin/ld         
 AR             = /usr/bin/ar
