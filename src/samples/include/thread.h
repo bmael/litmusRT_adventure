@@ -67,8 +67,6 @@
  *
  * =============================================================================
  */
-
-
 #ifndef THREAD_H
 #define THREAD_H 1
 
@@ -168,6 +166,13 @@ thread_startup (long numThread);
 void
 thread_start (void (*funcPtr)(void*), void* argPtr);
 
+/* =============================================================================
+ * rt_thread_shutdown
+ * -- Primary thread kills pool of secondary threads
+ * =============================================================================
+ */
+void
+rt_thread_shutdown ();
 
 /* =============================================================================
  * thread_shutdown

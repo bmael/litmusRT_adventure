@@ -37,7 +37,7 @@
  * for a total utilization of 1.
  */
 #define NUM_THREADS      2 
-#define MAX_VALUE		 3000000
+#define MAX_VALUE		 100
 
 /* The information passed to each thread. Could be anything. */
 struct thread_context {
@@ -53,13 +53,13 @@ void* rt_thread(void *tcontext);
  * Returns 1 -> task should exit.
  *         0 -> task should continue.
  */
-int jobPlus2(void);
+void jobPlus2(void);
 
 /* Declare the periodically invoked job: multiply a by 2. 
  * Returns 1 -> task should exit.
  *         0 -> task should continue.
  */
-int jobMultiplyBy2(void);
+void jobMultiplyBy2(void);
 
 int shared_a; // the shared variable to increment.
 
@@ -117,8 +117,11 @@ int main(int argc, char** argv)
 	P_MEMORY_STARTUP(NUM_THREADS);
 	
 	printf("[main] rt_thread_startup\n");
-	rt_thread_startup(NUM_THREADS, &task, rt_thread, ctx);
-		
+	thread_startup(NUM_THREADS);
+	
+	thread_start(jobPlus2, NULL);
+	thread_start(jobMultiplyBy2, NULL);	
+	
 	/*****
 	 * 5) Wait for RT threads to terminate.
 	 */
@@ -131,142 +134,53 @@ int main(int argc, char** argv)
 	printf("[main] P_MEMORY_SHUTDOWN()\n");
 	P_MEMORY_SHUTDOWN();
 	
+
 	/***** 
 	 * 6) Clean up, maybe print results and stats, and exit.
 	 */
 	return 0;
 }
 
-
-
-/* A real-time thread is very similar to the main function of a single-threaded
- * real-time app. Notice, that init_rt_thread() is called to initialized per-thread
- * data structures of the LITMUS^RT user space libary.
- */
-void* rt_thread(void *tcontext)
-{
-	int do_exit;
-	struct thread_context *ctx = (struct thread_context *) tcontext;
-	struct rt_task param;
-
-	/* Set up task parameters */
-	init_rt_task_param(&param);
-	param.exec_cost = ms2ns(EXEC_COST);
-	
-	/* Invoke the right job. */
-	if(ctx->id == 0){
-	  param.period = ms2ns(PERIOD1); 
-	}
-	else{
-	  param.period = ms2ns(PERIOD2);
-	}
-	
-	param.relative_deadline = ms2ns(RELATIVE_DEADLINE);
-
-	/* What to do in the case of budget overruns? */
-	param.budget_policy = NO_ENFORCEMENT;
-
-	/* The task class parameter is ignored by most plugins. */
-	param.cls = RT_CLASS_SOFT;
-
-	/* The priority parameter is only used by fixed-priority plugins. */
-	param.priority = LITMUS_LOWEST_PRIORITY;
-
-	/* Make presence visible. */
-	printf("RT Thread %d active.\n", ctx->id);
-
-	/*****
-	 * 1) Initialize real-time settings.
-	 */
-	CALL( init_rt_thread() );
-
-	/* To specify a partition, do
-	 *
-	 * param.cpu = CPU;
-	 * be_migrate_to(CPU);
-	 *
-	 * where CPU ranges from 0 to "Number of CPUs" - 1 before calling
-	 * set_rt_task_param().
-	 */
-	CALL( set_rt_task_param(gettid(), &param) );
-
-	/*****
-	 * 2) Transition to real-time mode.
-	 */
-	CALL( task_mode(LITMUS_RT_TASK) );
-
-	/* The task is now executing as a real-time task if the call didn't fail. 
-	 */
-
-	/*****
-	 * 3) Invoke real-time jobs.
-	 */
-		printf("[main] start_routine for ctx->id: %d\n", ctx->id);
-		do{
-		  	sleep_next_period();
-		  /* Invoke the right job. */
-		  if(ctx->id == 1){
-			printf("[main] Starting the jobPlus2\n");
-			do_exit = jobPlus2(); 
-		  }
-		  else{
-			printf("[main] Starting the jobMultiplyBy2\n");
-			do_exit = jobMultiplyBy2();
-		  }	
-		}while(!do_exit);
-
-	/*****
-	 * 4) Transition to background mode.
-	 */
-	CALL( task_mode(BACKGROUND_TASK) );
-
-	return NULL;
-}
-
-
-
-int jobPlus2(void) 
-{
-	int stop = 0;
-  
+void jobPlus2(void) 
+{ 
 	TM_THREAD_ENTER();
 	
-	/* Do real-time calculation. */
-	TM_BEGIN();
-	TM_SHARED_WRITE(shared_a, shared_a + 2);
-	
-	printf("[Thread 1] a = %d\n", shared_a);
-	
-	if(shared_a >= MAX_VALUE){
-	  stop = 1;
+	while(1){
+	  /* Do real-time calculation. */
+	  TM_BEGIN();
+	  TM_SHARED_WRITE(shared_a, shared_a + 2);
+	  
+	  printf("[jobPlus2] a = %d\n", shared_a);
+	  
+	  if(shared_a >= MAX_VALUE){
+		break;
+	  }
+	  
+	  TM_END();
 	}
 	
-	TM_END();
-	
 	TM_THREAD_EXIT();
-	return stop;
 }
 
-int jobMultiplyBy2(void) 
+void jobMultiplyBy2(void) 
 {  
-	int stop = 0;
   	TM_THREAD_ENTER();
 	
-	/* Do real-time calculation. */
-	TM_BEGIN();
-	TM_SHARED_WRITE(shared_a, shared_a * 2);
-	
-	printf("[Thread 2] a = %d\n", shared_a);
-	
-	if(shared_a >= MAX_VALUE){
-	  stop = 1;
+	while(1){
+	  /* Do real-time calculation. */
+	  TM_BEGIN();
+	  TM_SHARED_WRITE(shared_a, shared_a * 2);
+	  
+	  printf("[jobMultiplyBy2] a = %d\n", shared_a);
+	  
+	  if(shared_a >= MAX_VALUE){
+		break;
+	  } 
+	  
+	  TM_END();
 	}
 	
-	TM_END();
-	
 	TM_THREAD_EXIT();
-
-	return stop;
 }
 
 

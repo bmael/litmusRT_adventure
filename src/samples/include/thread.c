@@ -72,8 +72,16 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+
+/* Include gettid() */
+#include <sys/types.h>
+
 #include "thread.h"
 #include "types.h"
+#include "litmus.h"
+
+#define RELATIVE_DEADLINE 50
+#define EXEC_COST         10
 
 static THREAD_LOCAL_T    global_threadId;
 static long              global_numThread       = 1;
@@ -84,6 +92,17 @@ static THREAD_T*         global_threads         = NULL;
 static void            (*global_funcPtr)(void*) = NULL;
 static void*             global_argPtr          = NULL;
 static volatile bool_t   global_doShutdown      = FALSE;
+
+/* Catch errors.
+ */
+#define CALL( exp ) do { \
+		int ret; \
+		ret = exp; \
+		if (ret != 0) \
+			fprintf(stderr, "%s failed: %m\n", #exp);\
+		else \
+			fprintf(stderr, "%s ok.\n", #exp); \
+	} while (0)
 
 /* =============================================================================
  * threadWait
@@ -96,8 +115,58 @@ threadWait (void* argPtr)
     long threadId = *(long*)argPtr;
 
     THREAD_LOCAL_SET(global_threadId, (long)threadId);
+	
+	struct rt_task param;
+
+	/* Set up task parameters */
+	init_rt_task_param(&param);
+	param.exec_cost = ms2ns(EXEC_COST);
+	
+	/* Periods setup */
+	if(threadId == 0){
+	  param.period = ms2ns(100); 
+	}
+	else{
+	  param.period = ms2ns(800);
+	}
+	
+	param.relative_deadline = ms2ns(RELATIVE_DEADLINE);
+
+	/* What to do in the case of budget overruns? */
+	param.budget_policy = NO_ENFORCEMENT;
+
+	/* The task class parameter is ignored by most plugins. */
+	param.cls = RT_CLASS_SOFT;
+
+	/* The priority parameter is only used by fixed-priority plugins. */
+	param.priority = LITMUS_LOWEST_PRIORITY;
+
+	/* Make presence visible. */
+	printf("RT Thread %li active.\n", threadId);
+
+	/*****
+	 * 1) Initialize real-time settings.
+	 */
+	CALL( init_rt_thread() );
+
+	/* To specify a partition, do
+	 *
+	 * param.cpu = CPU;
+	 * be_migrate_to(CPU);
+	 *
+	 * where CPU ranges from 0 to "Number of CPUs" - 1 before calling
+	 * set_rt_task_param().
+	 */
+	CALL( set_rt_task_param(gettid(), &param) );
+
+	/*****
+	 * 2) Transition to real-time mode.
+	 */
+	CALL( task_mode(LITMUS_RT_TASK) );
+
 
     while (1) {
+		sleep_next_period();
 		printf("waiting...\n");
         THREAD_BARRIER(global_barrierPtr, threadId); /* wait for start parallel */
         if (global_doShutdown) {
@@ -109,61 +178,9 @@ threadWait (void* argPtr)
             break;
         }
     }
-}
-
-/* =============================================================================
- * CUSTOM thread_startup
- * -- Create pool of secondary threads
- * -- numThread is total number of threads (primary + secondaries)
- * =============================================================================
- */
-void
-rt_thread_startup (long numThread,pthread_t** task, void* rt_thread, thread_context* ctx)
-{
-  	printf("[thread.c] setting thread with rt_thread function\n");
-    long i;
-
-    global_numThread = numThread;
-    global_doShutdown = FALSE;
-
-    /* Set up barrier */
-    assert(global_barrierPtr == NULL);
-    global_barrierPtr = THREAD_BARRIER_ALLOC(numThread);
-    assert(global_barrierPtr);
-    THREAD_BARRIER_INIT(global_barrierPtr, numThread);
-
-    /* Set up ids */
-    THREAD_LOCAL_INIT(global_threadId);
-    assert(global_threadIds == NULL);
-    global_threadIds = (long*)malloc(numThread * sizeof(long));
-    assert(global_threadIds);
-    for (i = 0; i < numThread; i++) {
-        global_threadIds[i] = i;
-    }
-
-    /* Set up thread list */
-    assert(global_threads == NULL);
-    global_threads = (THREAD_T*)malloc(numThread * sizeof(THREAD_T));
-    assert(global_threads);
-
-    /* Set up pool */
-    THREAD_ATTR_INIT(global_threadAttr);
-    for (i = 1; i <= numThread; i++) {
-	  	printf("[thread.c] creating thread with id: %ld\n", i);
-		ctx[i].id = i;
-        THREAD_CREATE(global_threads[i],
-                      global_threadAttr,
-                      rt_thread,
-                      (ctx+i));
-		/*
-     * Wait for primary thread to call thread_start
-     */
-    }
     
-    *task = *global_threads;
+    CALL( task_mode(BACKGROUND_TASK) );
 }
-
-
 
 /* =============================================================================
  * thread_startup
@@ -232,7 +249,6 @@ thread_start (void (*funcPtr)(void*), void* argPtr)
     threadWait((void*)&threadId);
 }
 
-
 /* =============================================================================
  * thread_shutdown
  * -- Primary thread kills pool of secondary threads
@@ -245,13 +261,11 @@ thread_shutdown ()
     /* Make secondary threads exit wait() */
     global_doShutdown = TRUE;
     THREAD_BARRIER(global_barrierPtr, 0);
-	
-	printf("[thread.c] after THrfgerhkgjlkreygz\n");
 
     long numThread = global_numThread;
 
     long i;
-    for (i = 1; i <= numThread; i++) {
+    for (i = 1; i < numThread; i++) {
 		printf("[thread.c] join thread with id: %ld\n", i);
         THREAD_JOIN(global_threads[i]);
     }
@@ -339,7 +353,6 @@ thread_barrier (thread_barrier_t* barrierPtr, long threadId)
     do {
         index = base + threadId / i;
         if ((threadId % i) == 0) {
-			printf("[thread.c] thread_barrier : threadId % i == 0\n");
             THREAD_MUTEX_LOCK(barrierPtr[index].countLock);
             barrierPtr[index].count++;
             while (barrierPtr[index].count < 2) {
@@ -429,8 +442,6 @@ thread_barrier_wait()
 #define NUM_THREADS    (4)
 #define NUM_ITERATIONS (3)
 
-
-
 void
 printId (void* argPtr)
 {
@@ -452,7 +463,6 @@ printId (void* argPtr)
         fflush(stdout);
     }
 }
-
 
 int
 main ()
