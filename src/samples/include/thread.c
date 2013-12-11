@@ -114,7 +114,6 @@ static void
 threadWait (void* argPtr)
 {
     long threadId = *(long*)argPtr;
-	printf("[thread.c] threadId: %ld\n", threadId);
 
     THREAD_LOCAL_SET(global_threadId, (long)threadId);
 	
@@ -125,10 +124,13 @@ threadWait (void* argPtr)
 	param.exec_cost = ms2ns(EXEC_COST);
 	
 	/* Periods setup */
-	if(threadId == 0){
+	if(threadId == 0)
+	{
 	  param.period = ms2ns(100); 
 	}
-	else{
+	
+	if(threadId == 1)
+	{
 	  param.period = ms2ns(800);
 	}
 	
@@ -168,7 +170,6 @@ threadWait (void* argPtr)
 
 	int do_exit;
     do {
-		printf("waiting...\n");
         THREAD_BARRIER(global_barrierPtr, threadId); /* wait for start parallel */
         if (global_doShutdown) {
             break;
@@ -177,23 +178,24 @@ threadWait (void* argPtr)
         global_funcPtr(global_argPtr);
         
         //////////////// Custom JOBS defined in uselessjobs.h //////////////////
-        //sleep_next_period();
+        sleep_next_period();
 		
         if(threadId == 0){
-			do_exit = jobPlus2(30000);
+			do_exit = jobPlus2(3000000);
 		}
 		
 		if(threadId == 1){
-			do_exit = jobMultiplyBy2(30000);
+			do_exit = jobMultiplyBy2(3000000);
 		}
         /////////////// END Custom JOBS ////////////////////////////////////////
         
+		THREAD_BARRIER(global_barrierPtr, threadId); /* wait for end parallel */
+		if (threadId == 0) {
+			//break;
+		}
     } while(!do_exit);
     
-	THREAD_BARRIER(global_barrierPtr, threadId); /* wait for end parallel */
-	if (threadId == 0) {
-		//break;
-	}
+
 	
     CALL( task_mode(BACKGROUND_TASK) );
 }

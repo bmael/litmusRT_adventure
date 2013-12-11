@@ -41,13 +41,14 @@ int jobPlus2(int max_value)
   TM_BEGIN();
   TM_SHARED_WRITE(shared_a, shared_a + 2);
 
-  printf("[jobPlus2] a = %d\n", shared_a);
-
   if(shared_a >= max_value){
 	stop = 1;
   }
 
   TM_END();
+  
+  printf("[jobPlus2] value updated: shared_a = %d\n", shared_a);
+  
   TM_THREAD_EXIT();
   return stop;
 
@@ -68,13 +69,17 @@ int jobMultiplyBy2(int max_value)
   TM_BEGIN();
   TM_SHARED_WRITE(shared_a, shared_a * 2);
 
-  printf("[jobMultiplyBy2] a = %d\n", shared_a);
-
   if(shared_a >= max_value){
 	stop = 1;
   } 
 
   TM_END();
+  
+  printf("[jobMultiplyBy2] value updated: shared_a = %d\n", shared_a);
+  
   TM_THREAD_EXIT();
+  
+  sleep(1);
+  
   return stop;
 }

@@ -65,7 +65,7 @@ int main(int argc, char** argv)
 	pthread_t task[NUM_THREADS];
 	
 	/* The task is in background mode upon startup. */		
-
+	printf("[main]**************** Welcome ****************\n");
 
 	/*****
 	 * 1) Command line paramter parsing would be done here.
@@ -99,7 +99,7 @@ int main(int argc, char** argv)
 	thread_startup(NUM_THREADS);
 	
 	
-	thread_start(parallel_region, NULL);	
+	thread_start(parallel_region, NULL);
 	
 	/*****
 	 * 5) Wait for RT threads to terminate.
@@ -114,6 +114,8 @@ int main(int argc, char** argv)
 	printf("[main] Wait for RT threads to terminate\n");
 	thread_shutdown();
 	
+	printf("[main]**************** Good bye ****************\n");
+	
 	/***** 
 	 * 6) Clean up, maybe print results and stats, and exit.
 	 */
@@ -123,9 +125,7 @@ int main(int argc, char** argv)
 
 
 void parallel_region(){
-  
-  printf("[parallel_region] ...\n");
-  
+
 }
 
 
