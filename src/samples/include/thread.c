@@ -79,6 +79,7 @@
 #include "thread.h"
 #include "types.h"
 #include "litmus.h"
+#include "uselessjobs.h"
 
 #define RELATIVE_DEADLINE 50
 #define EXEC_COST         10
@@ -113,6 +114,7 @@ static void
 threadWait (void* argPtr)
 {
     long threadId = *(long*)argPtr;
+	printf("[thread.c] threadId: %ld\n", threadId);
 
     THREAD_LOCAL_SET(global_threadId, (long)threadId);
 	
@@ -164,21 +166,35 @@ threadWait (void* argPtr)
 	 */
 	CALL( task_mode(LITMUS_RT_TASK) );
 
-
-    while (1) {
-		sleep_next_period();
+	int do_exit;
+    do {
 		printf("waiting...\n");
         THREAD_BARRIER(global_barrierPtr, threadId); /* wait for start parallel */
         if (global_doShutdown) {
             break;
         }
+        
         global_funcPtr(global_argPtr);
-        THREAD_BARRIER(global_barrierPtr, threadId); /* wait for end parallel */
-        if (threadId == 0) {
-            break;
-        }
-    }
+        
+        //////////////// Custom JOBS defined in uselessjobs.h //////////////////
+        //sleep_next_period();
+		
+        if(threadId == 0){
+			do_exit = jobPlus2(30000);
+		}
+		
+		if(threadId == 1){
+			do_exit = jobMultiplyBy2(30000);
+		}
+        /////////////// END Custom JOBS ////////////////////////////////////////
+        
+    } while(!do_exit);
     
+	THREAD_BARRIER(global_barrierPtr, threadId); /* wait for end parallel */
+	if (threadId == 0) {
+		//break;
+	}
+	
     CALL( task_mode(BACKGROUND_TASK) );
 }
 
@@ -247,6 +263,11 @@ thread_start (void (*funcPtr)(void*), void* argPtr)
 
     long threadId = 0; /* primary */
     threadWait((void*)&threadId);
+}
+
+void thread_start_uselessjobs(){
+  long threadId = 0;
+  threadWait((void*)&threadId);
 }
 
 /* =============================================================================

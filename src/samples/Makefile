@@ -17,14 +17,21 @@ all: toolslib $(basename $(wildcard *.c))
 	
 memorylib : include/memory.h
 	$(CC) -c include/memory.c 
+
+uselessjobs: include/uselessjobs.h
+	$(CC) $(CPPFLAGS) -c include/uselessjobs.c 
 	
-threadlib : include/thread.h
+threadlib : include/thread.h 
 	$(CC) $(CPPFLAGS) -c include/thread.c 
 	
-toolslib: memorylib threadlib
+toolslib: memorylib threadlib uselessjobs
 	mkdir -p include/obj
 	mv thread.o include/obj/
 	mv memory.o include/obj/
+	mv uselessjobs.o include/obj/
+	
+	
+
 	
 .PHONY: clean
 clean:

@@ -50,13 +50,13 @@ void* rt_thread(void *tcontext);
  * Returns 1 -> task should exit.
  *         0 -> task should continue.
  */
-int jobPlus2(void);
+int jobPlus2Basic(void);
 
 /* Declare the periodically invoked job: multiply a by 2. 
  * Returns 1 -> task should exit.
  *         0 -> task should continue.
  */
-int jobMultiplyBy2(void);
+int jobMultiplyBy2Basic(void);
 
 int shared_a; // the shared variable to increment.
 sem_t mutex;  // mutex to securize shared_a access.
@@ -199,10 +199,10 @@ void* rt_thread(void *tcontext)
 		sleep_next_period();
 		/* Invoke the right job. */
 		if(ctx->id == 0){
-		 do_exit = jobPlus2(); 
+		 do_exit = jobPlus2Basic(); 
 		}
 		else{
-		  do_exit = jobMultiplyBy2();
+		  do_exit = jobMultiplyBy2Basic();
 		}		
 	} while (!do_exit);
 
@@ -219,7 +219,7 @@ void* rt_thread(void *tcontext)
 
 
 
-int jobPlus2(void) 
+int jobPlus2Basic(void) 
 {
 	int stop = 0;
 	
@@ -239,7 +239,7 @@ int jobPlus2(void)
 	return stop;
 }
 
-int jobMultiplyBy2(void) 
+int jobMultiplyBy2Basic(void) 
 {
 	int stop = 0;
   
