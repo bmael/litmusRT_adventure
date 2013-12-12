@@ -80,6 +80,7 @@
 #include "types.h"
 #include "litmus.h"
 #include "uselessjobs.h"
+#include "parallel_region.h"
 
 #define RELATIVE_DEADLINE 50
 #define EXEC_COST         10
@@ -93,6 +94,7 @@ static THREAD_T*         global_threads         = NULL;
 static void            (*global_funcPtr)(void*) = NULL;
 static void*             global_argPtr          = NULL;
 static volatile bool_t   global_doShutdown      = FALSE;
+static int               global_sample          = 0;
 
 /* Catch errors.
  */
@@ -169,6 +171,7 @@ threadWait (void* argPtr)
 	CALL( task_mode(LITMUS_RT_TASK) );
 
 	int do_exit;
+	printf("[thread.c] Sample value is: %d\n", global_sample);
     do {
         THREAD_BARRIER(global_barrierPtr, threadId); /* wait for start parallel */
         if (global_doShutdown) {
@@ -178,24 +181,29 @@ threadWait (void* argPtr)
         global_funcPtr(global_argPtr);
         
         //////////////// Custom JOBS defined in uselessjobs.h //////////////////
+		THREAD_BARRIER(global_barrierPtr, threadId); /* wait for end parallel */
         sleep_next_period();
-		
-        if(threadId == 0){
-			do_exit = jobPlus2(3000000);
+		// First sample for Aprinter_mt_tl2
+        if(threadId == 0 && global_sample == 1){
+			do_exit = jobPlus2(MAX_VALUE);
 		}
 		
-		if(threadId == 1){
-			do_exit = jobMultiplyBy2(3000000);
+		if(threadId == 1 && global_sample == 1){
+			do_exit = jobMultiplyBy2(MAX_VALUE);
 		}
+		
+		// Second sample for ABCprinter_mt_tl2
+		if(threadId == 0 && global_sample == 2){
+			do_exit = jobAPlusB(MAX_VALUE);
+		}
+		
+		if(threadId == 1 && global_sample == 2){
+			do_exit = jobAMultiplyByC(MAX_VALUE);
+		}
+		
         /////////////// END Custom JOBS ////////////////////////////////////////
         
-		THREAD_BARRIER(global_barrierPtr, threadId); /* wait for end parallel */
-		if (threadId == 0) {
-			//break;
-		}
     } while(!do_exit);
-    
-
 	
     CALL( task_mode(BACKGROUND_TASK) );
 }
@@ -207,12 +215,13 @@ threadWait (void* argPtr)
  * =============================================================================
  */
 void
-thread_startup (long numThread)
+thread_startup (long numThread, int sample)
 {
     long i;
 
     global_numThread = numThread;
     global_doShutdown = FALSE;
+	global_sample = sample;
 
     /* Set up barrier */
     assert(global_barrierPtr == NULL);
@@ -265,11 +274,6 @@ thread_start (void (*funcPtr)(void*), void* argPtr)
 
     long threadId = 0; /* primary */
     threadWait((void*)&threadId);
-}
-
-void thread_start_uselessjobs(){
-  long threadId = 0;
-  threadWait((void*)&threadId);
 }
 
 /* =============================================================================

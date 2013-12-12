@@ -81,7 +81,7 @@ int main(int argc, char** argv)
 	P_MEMORY_STARTUP(NUM_THREADS);
 	
 	printf("[main] rt_thread_startup\n");
-	thread_startup(NUM_THREADS, APRINTER_MT_TL2);
+	thread_startup(NUM_THREADS, ABCPRINTER_MT_TL2);
 	
 	
 	thread_start(parallel_region, NULL);
@@ -96,7 +96,6 @@ int main(int argc, char** argv)
 	printf("[main] P_MEMORY_SHUTDOWN()\n");
 	P_MEMORY_SHUTDOWN();
 	
-	
 	thread_shutdown();
 	
 	printf("[main]**************** Good bye ****************\n");
@@ -108,3 +107,4 @@ int main(int argc, char** argv)
 }
 
 
+ 

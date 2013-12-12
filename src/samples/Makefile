@@ -21,14 +21,18 @@ memorylib : include/memory.h
 uselessjobs: include/uselessjobs.h
 	$(CC) $(CPPFLAGS) -c include/uselessjobs.c 
 	
+parallel_region: include/parallel_region.h
+	$(CC) $(CPPFLAGS) -c include/parallel_region.c 
+	
 threadlib : include/thread.h 
 	$(CC) $(CPPFLAGS) -c include/thread.c 
 	
-toolslib: memorylib threadlib uselessjobs
+toolslib: memorylib threadlib uselessjobs parallel_region
 	mkdir -p include/obj
 	mv thread.o include/obj/
 	mv memory.o include/obj/
 	mv uselessjobs.o include/obj/
+	mv parallel_region.o include/obj/
 	
 	
 

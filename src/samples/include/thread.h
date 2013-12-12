@@ -153,7 +153,7 @@ rt_thread_startup (long numThread, pthread_t** task, void* rt_thread, thread_con
  * =============================================================================
  */
 void
-thread_startup (long numThread);
+thread_startup (long numThread, int sample);
 
 
 /* =============================================================================
